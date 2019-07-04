@@ -63,9 +63,13 @@ impl Pixels {
     }
 
     pub fn clear(&mut self) -> () {
+        self.fill_color(0);
+    }
+
+    pub fn fill_color(&mut self, color: u32) -> () {
         for x in 0..self.w {
             for y in 0..self.h {
-                self.pixels[x + self.w * y] = 0;
+                self.pixels[x + self.w * y] = color;
             }
         }
     }

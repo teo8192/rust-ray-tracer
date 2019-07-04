@@ -23,11 +23,7 @@ fn main() -> Result<(), String> {
 
     let mut pixels = render::Pixels::new(w, h);
 
-    for x in 0..w {
-        for y in 0..h {
-            pixels.set_pixel(x, y, render::color(1., 0., 1.))?;
-        }
-    }
+    pixels.fill_color(render::color(1., 0., 1.));
 
     let mut running = true;
     while running {
