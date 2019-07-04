@@ -2,9 +2,9 @@ extern crate cgmath;
 extern crate sdl2;
 
 use cgmath::Point3;
+use cgmath::Vector3;
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
-use std::time::Duration;
 
 pub mod rays;
 pub mod render;
@@ -35,7 +35,7 @@ fn main() -> Result<(), String> {
     //let sphere = shapes::Sphere::new(2.1, Point3::new(0., 0., 0.));
     //let shapes = shapes::Shapes::new();
     //shapes.add(sphere);
-    let hyperboloid = shapes::Hyperboloid::new(-1., Point3::new(0., 0., 0.));
+    let hyperboloid = shapes::Hyperboloid::new(-1., Point3::new(0., 0., 0.), Vector3::new(1., 1., 1.));
 
     let mut running = true;
     while running {

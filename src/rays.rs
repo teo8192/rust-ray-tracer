@@ -62,8 +62,8 @@ impl Ray {
         Ray { origin, direction }
     }
 
-    pub fn intersection(&self, shaps: shapes::Shapes) -> shapes::Material {
-        let min_t = shapes::Material::new();
+    pub fn intersection(&self, shapes: shapes::Shapes) -> shapes::Material {
+        let min_t = shapes::Material::Nothing;
         //for shape in shaps.shapes {
             //match shape.intersection(self) {
                 //Ok(t) => {
@@ -88,7 +88,7 @@ impl Ray {
                 mat
             },
             Err(_) => {
-                shapes::Material::new()
+                shapes::Material::Nothing
             }
         };
 
@@ -106,24 +106,20 @@ impl Ray {
     }
 
     pub fn col(&self, material: shapes::Material) -> u32 {
-        match material.material {
-            shapes::Materials::NONE => {
-                0
-            },
-            shapes::Materials::SPHERE => {
-                let n = material.normal;
+        match material {
+            shapes::Material::Sphere(t, n) => {
                 let c = Ray::light(n);
 
                 render::color(c, c, c)
             },
-            _ => {
-                let mut p = material.t * self.direction;
-                p.x += self.origin.x;
-                p.y += self.origin.y;
-                p.z += self.origin.z;
+            shapes::Material::Hyperboloid(t) => {
+                let mut p = self.origin + t * self.direction;
 
                 render::color(p.x.fract().abs(), p.y.fract().abs(), p.z.fract().abs())
             }
+            shapes::Material::Nothing => {
+                0
+            },
         }
     }
 }
