@@ -26,7 +26,7 @@ fn main() -> Result<(), String> {
     let mut event_pump = sdl_context.event_pump()?;
 
     let mut pixels = render::Pixels::new(w, h);
-    let scale = 4;
+    let mut scale = 8;
 
     let mut origin: Point3<f32> = Point3::new(0., 2., -10.);
 
@@ -89,6 +89,18 @@ fn main() -> Result<(), String> {
                 } => {
                     origin.y += 1.;
                     camdir.update(origin);
+                }
+                Event::KeyDown {
+                    keycode: Some(Keycode::P),
+                    ..
+                } => {
+                    scale = 8
+                }
+                Event::KeyDown {
+                    keycode: Some(Keycode::M),
+                    ..
+                } => {
+                    scale = 1
                 }
                 _ => {}
             }
