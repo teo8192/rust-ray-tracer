@@ -32,13 +32,18 @@ pub mod render {
         color
     }
 
-    pub fn set_pixel(pixels: &mut Vec<u32>, w: usize, h: usize, x: usize, y: usize, color: u32) -> () {
+    pub fn set_pixel(pixels: &mut Vec<u32>,
+                     w: usize,
+                     h: usize,
+                     x: usize,
+                     y: usize,
+                     color: u32) -> Result<(), &str> {
         if x >= w || y > h {
-            return ();
+            return Err("Out of bouds");
         }
         pixels[x + y * w] = color;
 
-        ()
+        Ok(())
     }
 
     pub fn copy_to_surface(surface: &WindowSurfaceRef, pixels: &mut Vec<u32>) -> () {
@@ -88,7 +93,7 @@ fn main() -> Result<(), String> {
 
     for x in 0..w {
         for y in 0..h {
-            render::set_pixel(&mut pixles, w, h, x, y, render::color(1., 0., 1.));
+            render::set_pixel(&mut pixles, w, h, x, y, render::color(1., 0., 1.))?;
         }
     }
 
