@@ -7,6 +7,12 @@ use std::time::Duration;
 pub mod render {
     use sdl2::video::WindowSurfaceRef;
 
+    pub struct Pixels {
+        pixels: Vec<u32>,
+        w: usize,
+        h: usize
+    }
+
     fn cap(c: f32, min: f32, max: f32) -> f32 {
         if c > max {
             return max;
@@ -32,43 +38,47 @@ pub mod render {
         color
     }
 
-    pub fn set_pixel(pixels: &mut Vec<u32>,
-                     w: usize,
-                     h: usize,
-                     x: usize,
-                     y: usize,
-                     color: u32) -> Result<(), &str> {
-        if x >= w || y > h {
-            return Err("Out of bouds");
-        }
-        pixels[x + y * w] = color;
+    impl Pixels {
+        pub fn new(w: usize, h: usize) -> Pixels {
+            let mut pixels: Vec<u32> = Vec::with_capacity(w * h);
+            for _ in 0..(w * h) {
+                pixels.push(0);
+            }
 
-        Ok(())
-    }
-
-    pub fn copy_to_surface(surface: &WindowSurfaceRef, pixels: &mut Vec<u32>) -> () {
-        let (w, h) = surface.size();
-        unsafe {
-            let raw_surface = *surface.raw();
-            raw_surface.pixels
-                .copy_from(pixels.as_mut_ptr() as *mut std::ffi::c_void, w as usize * h as usize * 4);
-        }
-        ()
-    }
-
-    pub fn generate_pixels(w: usize, h: usize) -> Vec<u32> {
-        let mut pixles: Vec<u32> = Vec::with_capacity(w * h);
-        for _ in 0..(w * h) {
-            pixles.push(0);
+            Pixels {
+                pixels,
+                w,
+                h
+            }
         }
 
-        pixles
-    }
+        pub fn set_pixel(&mut self,
+                         x: usize,
+                         y: usize,
+                         color: u32) -> Result<(), &str> {
+            if x >= self.w || y > self.h {
+                return Err("Out of bouds");
+            }
+            self.pixels[x + y * self.w] = color;
 
-    pub fn clear(pixels: &mut Vec<u32>, w: usize, h: usize) -> () {
-        for x in  0..w {
-            for y in 0..h {
-                pixels[x + w * y] = 0;
+            Ok(())
+        }
+
+        pub fn copy_to_surface(&mut self, surface: &WindowSurfaceRef) -> () {
+            let (w, h) = surface.size();
+            unsafe {
+                let raw_surface = *surface.raw();
+                raw_surface.pixels
+                    .copy_from(self.pixels.as_mut_ptr() as *mut std::ffi::c_void, w as usize * h as usize * 4);
+            }
+            ()
+        }
+
+        pub fn clear(&mut self) -> () {
+            for x in 0..self.w {
+                for y in 0..self.h {
+                    self.pixels[x + self.w * y] = 0;
+                }
             }
         }
     }
@@ -89,11 +99,11 @@ fn main() -> Result<(), String> {
 
     let mut event_pump = sdl_context.event_pump()?;
 
-    let mut pixles = render::generate_pixels(w, h);
+    let mut pixels = render::Pixels::new(w, h);
 
     for x in 0..w {
         for y in 0..h {
-            render::set_pixel(&mut pixles, w, h, x, y, render::color(1., 0., 1.))?;
+            pixels.set_pixel(x, y, render::color(1., 0., 1.))?;
         }
     }
 
@@ -114,7 +124,7 @@ fn main() -> Result<(), String> {
 
         let surface = window.surface(&event_pump)?;
 
-        render::copy_to_surface(&surface, &mut pixles);
+        pixels.copy_to_surface(&surface);
         surface.update_window().unwrap();
 
         std::thread::sleep(Duration::from_millis(100));
