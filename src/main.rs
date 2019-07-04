@@ -1,10 +1,14 @@
+extern crate cgmath;
 extern crate sdl2;
 
+use cgmath::Point3;
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use std::time::Duration;
 
+pub mod rays;
 pub mod render;
+pub mod shapes;
 
 fn main() -> Result<(), String> {
     let sdl_context = sdl2::init()?;
@@ -23,7 +27,15 @@ fn main() -> Result<(), String> {
 
     let mut pixels = render::Pixels::new(w, h);
 
-    pixels.fill_color(render::color(1., 0., 1.));
+    let mut origin: Point3<f32> = Point3::new(0., 2., -10.);
+
+    let mut camdir = rays::CamDir::new(origin, Point3::new(0., 0., 0.));
+
+    let sphere = shapes::Sphere::new(2.1, Point3::new(0., 0., 0.));
+    //let shapes = shapes::Shapes::new();
+    //shapes.add(sphere);
+
+    let scale = 4;
 
     let mut running = true;
     while running {
@@ -36,7 +48,65 @@ fn main() -> Result<(), String> {
                 } => {
                     running = false;
                 }
+                Event::KeyDown {
+                    keycode: Some(Keycode::W),
+                    ..
+                } => {
+                    origin.z += 1.;
+                    camdir.update(origin);
+                }
+                Event::KeyDown {
+                    keycode: Some(Keycode::S),
+                    ..
+                } => {
+                    origin.z -= 1.;
+                    camdir.update(origin);
+                }
+                Event::KeyDown {
+                    keycode: Some(Keycode::D),
+                    ..
+                } => {
+                    origin.x += 1.;
+                    camdir.update(origin);
+                }
+                Event::KeyDown {
+                    keycode: Some(Keycode::A),
+                    ..
+                } => {
+                    origin.x -= 1.;
+                    camdir.update(origin);
+                }
+                Event::KeyDown {
+                    keycode: Some(Keycode::Space),
+                    ..
+                } => {
+                    origin.y -= 1.;
+                    camdir.update(origin);
+                }
+                Event::KeyDown {
+                    keycode: Some(Keycode::LShift),
+                    ..
+                } => {
+                    origin.y += 1.;
+                    camdir.update(origin);
+                }
                 _ => {}
+            }
+        }
+
+        pixels.fill_color(render::color(1., 0., 1.));
+
+
+        for x in 0..w/scale {
+            for y in 0..h/scale {
+                let uv = rays::CamDir::uv(x, y, w/scale, h/scale);
+                let color = rays::Ray::from_camdir(&camdir, uv)
+                    .color_single_intersection(&sphere);
+                for x1 in 0..scale {
+                    for y1 in 0..scale {
+                        pixels.set_pixel(x*scale + x1, y*scale + y1, color)?;
+                    }
+                }
             }
         }
 
@@ -45,7 +115,6 @@ fn main() -> Result<(), String> {
         pixels.copy_to_surface(&surface);
         surface.update_window().unwrap();
 
-        std::thread::sleep(Duration::from_millis(100));
     }
 
     Ok(())
