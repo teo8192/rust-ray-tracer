@@ -1,14 +1,15 @@
 extern crate cgmath;
 
-use cgmath::*;
 use super::rays;
+use cgmath::*;
 
 pub enum IntersectErr {
-    IsBehind, Other
+    IsBehind,
+    Other,
 }
 
 fn abc(a: f32, b: f32, c: f32) -> Result<f32, IntersectErr> {
-    let num = square(b) - 4. * a * c;
+    let num = b * b - 4. * a * c;
     if num < 0. {
         return Err(IntersectErr::IsBehind);
     }
@@ -27,7 +28,6 @@ fn min_g0(a: f32, b: f32) -> Result<f32, IntersectErr> {
     } else if b < 0. || a <= b {
         Ok(a)
     } else {
-        println!("{} {}", a, b);
         Err(IntersectErr::Other)
     }
 }
@@ -36,27 +36,25 @@ pub trait Shape {
     fn intersection(&self, ray: &rays::Ray) -> Result<Material, IntersectErr>;
 }
 
-pub struct Shapes {
-    shapes: i32,
+pub struct Shapes<'a> {
+    pub shapes: Vec<&'a Shape>,
 }
 
-impl Shapes {
-    pub fn new() -> Shapes {
-        //let shapes: Vec<Shape> = Vec::new();
-        //Shapes { shapes }
-        let shapes = 0;
-        Shapes { shapes } 
+impl<'a> Shapes<'a> {
+    pub fn new() -> Shapes<'a> {
+        let shapes = Vec::new();
+        Shapes { shapes }
     }
 
-    pub fn add(&mut self, shape: &Shape) {
-        self.shapes = 0;
+    pub fn add(&mut self, shape: &'a Shape) {
+        self.shapes.push(shape);
     }
 }
 
 pub enum Material {
     Nothing,
     Sphere(f32, Vector3<f32>),
-    Hyperboloid(f32)
+    Hyperboloid(f32),
 }
 
 pub struct Hyperboloid {
@@ -67,7 +65,11 @@ pub struct Hyperboloid {
 
 impl Hyperboloid {
     pub fn new(lambda: f32, origin: Point3<f32>, dimensions: Vector3<f32>) -> Hyperboloid {
-        Hyperboloid { lambda, origin, dimensions }
+        Hyperboloid {
+            lambda,
+            origin,
+            dimensions,
+        }
     }
 }
 
@@ -85,15 +87,12 @@ impl Shape for Hyperboloid {
         direction.z /= self.dimensions.z;
 
         let a = square(direction.x) + square(direction.y) - square(direction.z);
-        let b = 2. * origin.x * direction.x
-            + 2. * origin.y * direction.y
-            - 2. * origin.z * direction.z;
-        let c =  square(origin.x) + square(origin.y) - square(origin.z)- self.lambda;
+        let b =
+            2. * origin.x * direction.x + 2. * origin.y * direction.y - 2. * origin.z * direction.z;
+        let c = square(origin.x) + square(origin.y) - square(origin.z) - self.lambda;
 
         match abc(a, b, c) {
-            Ok(t) => {
-                Ok(Material::Hyperboloid(t))
-            },
+            Ok(t) => Ok(Material::Hyperboloid(t)),
             Err(err) => Err(err),
         }
     }
@@ -112,8 +111,6 @@ impl Sphere {
 
 impl Shape for Sphere {
     fn intersection(&self, ray: &rays::Ray) -> Result<Material, IntersectErr> {
-        let square = |num: f32| -> f32 { num * num };
-
         let origin = ray.origin - self.origin;
 
         let a = ray.direction.magnitude2();
@@ -123,15 +120,10 @@ impl Shape for Sphere {
         let c = origin.magnitude2() - self.radius * self.radius;
 
         match abc(a, b, c) {
-            Ok(t) => {
-                let mut p = t * ray.direction;
-                p.x += origin.x;
-                p.y += origin.y;
-                p.z += origin.z;
-                let normal = p.normalize();
-
-                Ok(Material::Sphere(t, normal))
-            },
+            Ok(t) => Ok(Material::Sphere(
+                t,
+                (origin + t * ray.direction).normalize(),
+            )),
             Err(err) => Err(err),
         }
     }

@@ -1,8 +1,9 @@
 extern crate cgmath;
 
-use cgmath::*;
-use super::shapes;
 use super::render;
+use super::shapes;
+use super::shapes::Material;
+use cgmath::*;
 
 pub struct Ray {
     pub origin: Point3<f32>,
@@ -35,7 +36,7 @@ impl CamDir {
             target,
             cf,
             cr,
-            cu
+            cu,
         }
     }
 
@@ -62,34 +63,70 @@ impl Ray {
         Ray { origin, direction }
     }
 
-    pub fn intersection(&self, shapes: shapes::Shapes) -> shapes::Material {
-        let min_t = shapes::Material::Nothing;
-        //for shape in shaps.shapes {
-            //match shape.intersection(self) {
-                //Ok(t) => {
-                    //if t.t < min_t.t || min_t.material == shapes::Materials::NONE {
-                        //min_t = t
-                    //}
-                //}
-                //Err(err) => {}
-            //}
-        //}
-
-        min_t
-    }
-
-    pub fn single_intersection(self, shape: &shapes::Shape) -> Result<shapes::Material, shapes::IntersectErr> {
-        shape.intersection(&self)
-    }
-
-    pub fn color_single_intersection(self, shape: &shapes::Shape) -> u32 {
-        let material = match shape.intersection(&self) {
-            Ok(mat) => {
-                mat
+    fn closest_material_helper(
+        &self,
+        materials: &mut Vec<Material>,
+        material: Material,
+        t: f32,
+    ) -> Material {
+        let new_material_maybe = materials.pop();
+        match new_material_maybe {
+            None => material,
+            Some(new_material) => match new_material {
+                Material::Nothing => self.closest_material_helper(materials, material, t),
+                Material::Sphere(t1, n) => {
+                    if t1 < t {
+                        self.closest_material_helper(materials, Material::Sphere(t1, n), t1)
+                    } else {
+                        self.closest_material_helper(materials, material, t)
+                    }
+                }
+                Material::Hyperboloid(t1) => {
+                    if t1 < t {
+                        self.closest_material_helper(materials, Material::Hyperboloid(t1), t1)
+                    } else {
+                        self.closest_material_helper(materials, material, t)
+                    }
+                }
             },
-            Err(_) => {
-                shapes::Material::Nothing
-            }
+        }
+    }
+
+    fn closest_material(&self, materials: &mut Vec<Material>) -> Material {
+        let material = materials.pop();
+        match material {
+            None => Material::Nothing,
+            Some(material) => match material {
+                Material::Nothing => self.closest_material(materials),
+                Material::Sphere(t, n) => {
+                    self.closest_material_helper(materials, Material::Sphere(t, n), t)
+                }
+                Material::Hyperboloid(t) => {
+                    self.closest_material_helper(materials, Material::Hyperboloid(t), t)
+                }
+            },
+        }
+    }
+
+    pub fn intersection(&self, shapes: &shapes::Shapes) -> u32 {
+        let mut materials: Vec<Material> = shapes
+            .shapes
+            .iter()
+            .map(|x| -> Material {
+                match x.intersection(&self) {
+                    Ok(material) => material,
+                    Err(_) => Material::Nothing,
+                }
+            })
+            .collect();
+
+        self.col(self.closest_material(&mut materials))
+    }
+
+    pub fn single_intersection(self, shape: &shapes::Shape) -> u32 {
+        let material = match shape.intersection(&self) {
+            Ok(mat) => mat,
+            Err(_) => Material::Nothing,
         };
 
         self.col(material)
@@ -105,21 +142,19 @@ impl Ray {
         }
     }
 
-    pub fn col(&self, material: shapes::Material) -> u32 {
+    pub fn col(&self, material: Material) -> u32 {
         match material {
-            shapes::Material::Sphere(t, n) => {
+            Material::Sphere(_t, n) => {
                 let c = Ray::light(n);
 
                 render::color(c, c, c)
-            },
-            shapes::Material::Hyperboloid(t) => {
-                let mut p = self.origin + t * self.direction;
+            }
+            Material::Hyperboloid(t) => {
+                let p = self.origin + t * self.direction;
 
                 render::color(p.x.fract().abs(), p.y.fract().abs(), p.z.fract().abs())
             }
-            shapes::Material::Nothing => {
-                0
-            },
+            Material::Nothing => 0,
         }
     }
 }
