@@ -118,6 +118,12 @@ impl Ray {
                     Err(_) => Material::Nothing,
                 }
             })
+            .filter(|x| -> bool {
+                match x {
+                    Material::Nothing => false,
+                    _ => true,
+                }
+            })
             .collect();
 
         self.col(self.closest_material(&mut materials))
