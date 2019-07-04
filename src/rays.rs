@@ -88,15 +88,21 @@ impl Ray {
                 mat
             },
             Err(_) => {
-                let t = 0.;
-                let material = shapes::Materials::NONE;
-                shapes::Material {
-                    t, material
-                }
+                shapes::Material::new()
             }
         };
 
         self.col(material)
+    }
+
+    fn light(normal: Vector3<f32>) -> f32 {
+        let l: Vector3<f32> = Vector3::new(-1., -2., -3.).normalize();
+        let c = normal.dot(l);
+        if c < 0. {
+            0.
+        } else {
+            c
+        }
     }
 
     pub fn col(&self, material: shapes::Material) -> u32 {
@@ -104,8 +110,14 @@ impl Ray {
             shapes::Materials::NONE => {
                 0
             },
+            shapes::Materials::SPHERE => {
+                let n = material.normal;
+                let c = Ray::light(n);
+
+                render::color(c, c, c)
+            },
             _ => {
-                let mut p = self.direction * material.t;
+                let mut p = material.t * self.direction;
                 p.x += self.origin.x;
                 p.y += self.origin.y;
                 p.z += self.origin.z;

@@ -26,16 +26,16 @@ fn main() -> Result<(), String> {
     let mut event_pump = sdl_context.event_pump()?;
 
     let mut pixels = render::Pixels::new(w, h);
+    let scale = 4;
 
     let mut origin: Point3<f32> = Point3::new(0., 2., -10.);
 
     let mut camdir = rays::CamDir::new(origin, Point3::new(0., 0., 0.));
 
-    let sphere = shapes::Sphere::new(2.1, Point3::new(0., 0., 0.));
+    //let sphere = shapes::Sphere::new(2.1, Point3::new(0., 0., 0.));
     //let shapes = shapes::Shapes::new();
     //shapes.add(sphere);
-
-    let scale = 4;
+    let hyperboloid = shapes::Hyperboloid::new(-1., Point3::new(0., 0., 0.));
 
     let mut running = true;
     while running {
@@ -96,12 +96,11 @@ fn main() -> Result<(), String> {
 
         pixels.fill_color(render::color(1., 0., 1.));
 
-
         for x in 0..w/scale {
             for y in 0..h/scale {
                 let uv = rays::CamDir::uv(x, y, w/scale, h/scale);
                 let color = rays::Ray::from_camdir(&camdir, uv)
-                    .color_single_intersection(&sphere);
+                    .color_single_intersection(&hyperboloid);
                 for x1 in 0..scale {
                     for y1 in 0..scale {
                         pixels.set_pixel(x*scale + x1, y*scale + y1, color)?;
