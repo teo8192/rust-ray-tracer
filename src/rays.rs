@@ -183,7 +183,6 @@ impl Ray {
             Material::Plane(t, n) => {
                 let p = self.origin + t * self.direction;
                 let c = Ray::light(n);
-                //let c = 1.;
 
                 render::color(
                     p.x.fract().abs() * c,
