@@ -203,7 +203,7 @@ impl Shape for Spheroid {
         let c = origin.magnitude2() - self.radius * self.radius;
 
         match abc(a, b, c) {
-            Ok(t) => Ok(Material::Spheroid(t, -(origin + t * direction).normalize())),
+            Ok(t) => Ok(Material::Spheroid(t, (origin + t * direction).normalize())),
             Err(err) => Err(err),
         }
     }

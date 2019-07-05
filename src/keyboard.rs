@@ -58,14 +58,14 @@ pub fn check_keyboard(
                 keycode: Some(Keycode::Space),
                 ..
             } => {
-                origin.y -= 1.;
+                origin.y += 1.;
                 camdir.update(*origin);
             }
             Event::KeyDown {
                 keycode: Some(Keycode::LShift),
                 ..
             } => {
-                origin.y += 1.;
+                origin.y -= 1.;
                 camdir.update(*origin);
             }
             Event::KeyDown {

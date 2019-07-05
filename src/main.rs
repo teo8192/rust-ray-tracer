@@ -70,8 +70,6 @@ fn main() -> Result<(), String> {
 
         let (w, h) = canvas.output_size()?;
 
-        println!("{} {}", w, h);
-
         let get_color = |x, y| -> u32 {
             rays::Ray::from_camdir(
                 &camdir,

@@ -27,6 +27,7 @@ impl CamDir {
     pub fn uv(x: usize, y: usize, w: usize, h: usize) -> Vector2<f32> {
         let mut uv = Vector2::new(x as f32 / w as f32 - 0.5, y as f32 / h as f32 - 0.5);
         uv.x *= w as f32 / h as f32;
+        uv.y *= -1.;
         uv
     }
 
@@ -158,7 +159,7 @@ impl Ray {
     }
 
     fn light(normal: Vector3<f32>) -> f32 {
-        let l: Vector3<f32> = Vector3::new(-1., 2., -3.).normalize();
+        let l: Vector3<f32> = Vector3::new(1., 2., -3.).normalize();
         let c = normal.dot(l);
         if c < 0. {
             0.
