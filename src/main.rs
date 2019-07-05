@@ -5,12 +5,20 @@ use cgmath::Point3;
 use cgmath::Vector3;
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
+use sdl2::pixels::Color;
+use sdl2::rect::Rect;
 
 pub mod rays;
 pub mod render;
 pub mod shapes;
 
-fn check_keyboard(event_pump: &mut sdl2::EventPump, running: &mut bool, origin: &mut Point3<f32>, camdir: &mut rays::CamDir, scale: &mut usize) {
+fn check_keyboard(
+    event_pump: &mut sdl2::EventPump,
+    running: &mut bool,
+    origin: &mut Point3<f32>,
+    camdir: &mut rays::CamDir,
+    scale: &mut usize,
+) {
     for event in event_pump.poll_iter() {
         match event {
             Event::Quit { .. }
@@ -75,6 +83,14 @@ fn check_keyboard(event_pump: &mut sdl2::EventPump, running: &mut bool, origin: 
     }
 }
 
+fn color_to_rgb(color: u32) -> Color {
+    let b = color % 256;
+    let g = (color >> 8) % 256;
+    let r = (color >> 16) % 256;
+
+    Color::RGB(r as u8, g as u8, b as u8)
+}
+
 fn main() -> Result<(), String> {
     let sdl_context = sdl2::init()?;
     let video_subsystem = sdl_context.video()?;
@@ -90,7 +106,12 @@ fn main() -> Result<(), String> {
 
     let mut event_pump = sdl_context.event_pump()?;
 
-    let mut pixels = render::Pixels::new(w, h);
+    let mut canvas = window
+        .into_canvas()
+        .accelerated()
+        .build()
+        .map_err(|e| e.to_string())?;
+    //let mut pixels = render::Pixels::new(w, h);
     let mut scale = 8;
 
     let mut origin: Point3<f32> = Point3::new(0., 2., -10.);
@@ -106,7 +127,13 @@ fn main() -> Result<(), String> {
 
     let mut running = true;
     while running {
-        check_keyboard(&mut event_pump, &mut running, &mut origin, &mut camdir, &mut scale);
+        check_keyboard(
+            &mut event_pump,
+            &mut running,
+            &mut origin,
+            &mut camdir,
+            &mut scale,
+        );
 
         let get_color = |x, y| -> u32 {
             rays::Ray::from_camdir(&camdir, rays::CamDir::uv(x, y, w / scale, h / scale))
@@ -116,18 +143,17 @@ fn main() -> Result<(), String> {
         for x in 0..w / scale {
             for y in 0..h / scale {
                 let color = get_color(x, y);
-                for x1 in 0..scale {
-                    for y1 in 0..scale {
-                        pixels.set_pixel(x * scale + x1, y * scale + y1, color)?;
-                    }
-                }
+                canvas.set_draw_color(color_to_rgb(color));
+                canvas.fill_rect(Rect::new(
+                    (x * scale) as i32,
+                    (y * scale) as i32,
+                    scale as u32,
+                    scale as u32,
+                ))?;
             }
         }
 
-        let surface = window.surface(&event_pump)?;
-
-        pixels.copy_to_surface(&surface);
-        surface.update_window().unwrap();
+        canvas.present();
     }
 
     Ok(())
