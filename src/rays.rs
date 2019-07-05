@@ -119,6 +119,13 @@ impl Ray {
                         self.closest_material_helper(materials, material, t)
                     }
                 }
+                Material::Cylinder(t1) => {
+                    if t1 < t {
+                        self.closest_material_helper(materials, Material::Cylinder(t1), t1)
+                    } else {
+                        self.closest_material_helper(materials, material, t)
+                    }
+                }
             },
         }
     }
@@ -137,6 +144,9 @@ impl Ray {
                 }
                 Material::Torus(t) => {
                     self.closest_material_helper(materials, Material::Torus(t), t)
+                }
+                Material::Cylinder(t) => {
+                    self.closest_material_helper(materials, Material::Cylinder(t), t)
                 }
                 Material::Plane(t, n) => {
                     self.closest_material_helper(materials, Material::Plane(t, n), t)
@@ -200,6 +210,11 @@ impl Ray {
                 render::color(p.x.fract().abs(), p.y.fract().abs(), p.z.fract().abs())
             }
             Material::Torus(t) => {
+                let p = self.origin + t * self.direction;
+
+                render::color(p.x.fract().abs(), p.y.fract().abs(), p.z.fract().abs())
+            }
+            Material::Cylinder(t) => {
                 let p = self.origin + t * self.direction;
 
                 render::color(p.x.fract().abs(), p.y.fract().abs(), p.z.fract().abs())

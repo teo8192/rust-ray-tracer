@@ -71,8 +71,37 @@ pub enum Material {
     Hyperboloid(f32),
     Plane(f32, Vector3<f32>),
     Torus(f32),
+    Cylinder(f32),
 }
 
+pub struct Cylinder {
+    radius: f32,
+    origin: Point3<f32>,
+}
+
+impl Cylinder {
+    pub fn new(radius: f32, origin: Point3<f32>) -> Cylinder {
+        Cylinder { radius, origin }
+    }
+}
+
+impl Shape for Cylinder {
+    fn intersection(&self, ray: &rays::Ray) -> Result<Material, IntersectErr> {
+        let origin = ray.origin - self.origin;
+        let sq = |x| -> f32 {x * x};
+
+        let a = sq(ray.direction.x) + sq(ray.direction.y);
+        let b = 2. * (origin.x * ray.direction.x + origin.y * ray.direction.y);
+        let c = sq(origin.x) + sq(origin.y) - sq(self.radius);
+
+        match abc(a, b, c) {
+            Ok(t) => Ok(Material::Cylinder(t)),
+            Err(err) => Err(err),
+        }
+    }
+}
+
+// {{{ TORUS
 pub struct Torus {
     inner_radius: f32,
     tube_radius: f32,
@@ -84,14 +113,14 @@ impl Torus {
         Torus {
             inner_radius,
             tube_radius,
-            origin
+            origin,
         }
     }
 }
 
 impl Shape for Torus {
     fn intersection(&self, ray: &rays::Ray) -> Result<Material, IntersectErr> {
-        let sq = |x| -> f32 {x * x};
+        let sq = |x| -> f32 { x * x };
 
         let Rsq = sq(self.inner_radius);
         let rsq = sq(self.tube_radius);
@@ -99,7 +128,10 @@ impl Shape for Torus {
         let origin = ray.origin - self.origin;
 
         let a1 = ray.direction.magnitude2();
-        let b1 = 2. * (origin.x * ray.direction.x + origin.y * ray.direction.y + origin.z * ray.direction.z);
+        let b1 = 2.
+            * (origin.x * ray.direction.x
+                + origin.y * ray.direction.y
+                + origin.z * ray.direction.z);
         let c11 = origin.magnitude2();
         let c12 = Rsq - rsq;
 
@@ -143,10 +175,8 @@ impl Shape for Torus {
 
                 min_root
             }
-            Roots::One(roots) => {
-                roots[0]
-            }
-            _ => -1.
+            Roots::One(roots) => roots[0],
+            _ => -1.,
         };
 
         if t < 0. {
@@ -156,6 +186,7 @@ impl Shape for Torus {
         }
     }
 }
+// }}}
 
 /// The plane is a flat 3-dimensional surface.
 /// It is defined with a point on the plane (calling it the origin)
