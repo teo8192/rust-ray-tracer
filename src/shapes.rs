@@ -1,9 +1,12 @@
 //! Some basic mathematical shapes to be used with ray-tracing
 
 extern crate cgmath;
+extern crate roots;
 
 use super::rays;
 use cgmath::*;
+use roots::find_roots_quartic;
+use roots::Roots;
 
 /// If the point on the ray is behind the camera
 /// or have values like NaN and inf
@@ -67,6 +70,91 @@ pub enum Material {
     Spheroid(f32, Vector3<f32>),
     Hyperboloid(f32),
     Plane(f32, Vector3<f32>),
+    Torus(f32),
+}
+
+pub struct Torus {
+    inner_radius: f32,
+    tube_radius: f32,
+    origin: Point3<f32>,
+}
+
+impl Torus {
+    pub fn new(inner_radius: f32, tube_radius: f32, origin: Point3<f32>) -> Torus {
+        Torus {
+            inner_radius,
+            tube_radius,
+            origin
+        }
+    }
+}
+
+impl Shape for Torus {
+    fn intersection(&self, ray: &rays::Ray) -> Result<Material, IntersectErr> {
+        let sq = |x| -> f32 {x * x};
+
+        let Rsq = sq(self.inner_radius);
+        let rsq = sq(self.tube_radius);
+
+        let origin = ray.origin - self.origin;
+
+        let a1 = ray.direction.magnitude2();
+        let b1 = 2. * (origin.x * ray.direction.x + origin.y * ray.direction.y + origin.z * ray.direction.z);
+        let c11 = origin.magnitude2();
+        let c12 = Rsq - rsq;
+
+        let a = sq(a1);
+        let b = 2. * a1 * b1;
+        let c = 2. * a1 * (c11 + c12) + sq(b1) - 4. * Rsq * (c11 - sq(origin.z));
+        let d = 2. * b1 * (c11 + c12) - 4. * Rsq * (b1 - 2. * origin.z * ray.direction.z);
+        let e = sq(c11 + c12) - 4. * Rsq * (c11 - sq(origin.z));
+
+        let t = match find_roots_quartic(a, b, c, d, e) {
+            Roots::Four(roots) => {
+                let mut min_root = roots[0];
+                if roots[1] < min_root && roots[1] > 0. {
+                    min_root = roots[1];
+                }
+                if roots[2] < min_root && roots[2] > 0. {
+                    min_root = roots[2];
+                }
+                if roots[3] < min_root && roots[3] > 0. {
+                    min_root = roots[3];
+                }
+
+                min_root
+            }
+            Roots::Three(roots) => {
+                let mut min_root = roots[0];
+                if roots[1] < min_root && roots[1] > 0. {
+                    min_root = roots[1];
+                }
+                if roots[2] < min_root && roots[2] > 0. {
+                    min_root = roots[2];
+                }
+
+                min_root
+            }
+            Roots::Two(roots) => {
+                let mut min_root = roots[0];
+                if roots[1] < min_root && roots[1] > 0. {
+                    min_root = roots[1];
+                }
+
+                min_root
+            }
+            Roots::One(roots) => {
+                roots[0]
+            }
+            _ => -1.
+        };
+
+        if t < 0. {
+            Err(IntersectErr::IsBehind)
+        } else {
+            Ok(Material::Torus(t))
+        }
+    }
 }
 
 /// The plane is a flat 3-dimensional surface.

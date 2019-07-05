@@ -51,12 +51,14 @@ fn main() -> Result<(), String> {
 
     //let hyperboloid =
     //shapes::Hyperboloid::new(-1., Point3::new(0., 0., 0.), Vector3::new(1., 0.5, 1.));
-    let sphere = shapes::Spheroid::new(2.1, Point3::new(0., 0., 0.), Vector3::new(1., 1., 0.7));
-    let plane = shapes::Plane::new(Vector3::new(0., 1., 0.), Point3::new(0., 0., 0.));
+    //let sphere = shapes::Spheroid::new(2.1, Point3::new(0., 0., 0.), Vector3::new(1., 1., 0.7));
+    //let plane = shapes::Plane::new(Vector3::new(0., 1., 0.), Point3::new(0., 0., 0.));
+    let torus = shapes::Torus::new(0.3, 1., Point3::new(0., 0., 0.));
     let mut objects = shapes::Shapes::new();
-    objects.add(&sphere);
+    objects.add(&torus);
+    //objects.add(&sphere);
     //objects.add(&hyperboloid);
-    objects.add(&plane);
+    //objects.add(&plane);
 
     let mut running = true;
     while running {

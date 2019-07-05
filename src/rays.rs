@@ -11,6 +11,7 @@ use cgmath::*;
 pub struct Ray {
     pub origin: Point3<f32>,
     pub direction: Vector3<f32>,
+    light: Vector3<f32>,
 }
 
 /// Contains some variables common for all rays
@@ -61,14 +62,22 @@ impl Ray {
     pub fn new(origin: Point3<f32>, direction: Vector3<f32>) -> Ray {
         let direction = direction.normalize();
 
-        Ray { origin, direction }
+        Ray {
+            origin,
+            direction,
+            light: Vector3::new(1., 2., -3.).normalize(),
+        }
     }
 
     /// Returns a new ray calculated from the variables in the Camera
     pub fn from_camdir(camdir: &CamDir, uv: Vector2<f32>) -> Ray {
         let direction = (uv.x * camdir.cr + uv.y * camdir.cu + 2. * camdir.cf).normalize();
         let origin = camdir.origin;
-        Ray { origin, direction }
+        Ray {
+            origin,
+            direction,
+            light: Vector3::new(1., 2., -3.).normalize(),
+        }
     }
 
     fn closest_material_helper(
@@ -103,6 +112,13 @@ impl Ray {
                         self.closest_material_helper(materials, material, t)
                     }
                 }
+                Material::Torus(t1) => {
+                    if t1 < t {
+                        self.closest_material_helper(materials, Material::Torus(t1), t1)
+                    } else {
+                        self.closest_material_helper(materials, material, t)
+                    }
+                }
             },
         }
     }
@@ -118,6 +134,9 @@ impl Ray {
                 }
                 Material::Hyperboloid(t) => {
                     self.closest_material_helper(materials, Material::Hyperboloid(t), t)
+                }
+                Material::Torus(t) => {
+                    self.closest_material_helper(materials, Material::Torus(t), t)
                 }
                 Material::Plane(t, n) => {
                     self.closest_material_helper(materials, Material::Plane(t, n), t)
@@ -158,9 +177,8 @@ impl Ray {
         self.col(material)
     }
 
-    fn light(normal: Vector3<f32>) -> f32 {
-        let l: Vector3<f32> = Vector3::new(1., 2., -3.).normalize();
-        let c = normal.dot(l);
+    fn light(&self, normal: Vector3<f32>) -> f32 {
+        let c = normal.dot(self.light);
         if c < 0. {
             0.
         } else {
@@ -172,7 +190,7 @@ impl Ray {
     pub fn col(&self, material: Material) -> u32 {
         match material {
             Material::Spheroid(_t, n) => {
-                let c = Ray::light(n);
+                let c = self.light(n);
 
                 render::color(c, c, c)
             }
@@ -181,9 +199,14 @@ impl Ray {
 
                 render::color(p.x.fract().abs(), p.y.fract().abs(), p.z.fract().abs())
             }
+            Material::Torus(t) => {
+                let p = self.origin + t * self.direction;
+
+                render::color(p.x.fract().abs(), p.y.fract().abs(), p.z.fract().abs())
+            }
             Material::Plane(t, n) => {
                 let p = self.origin + t * self.direction;
-                let c = Ray::light(n);
+                let c = self.light(n);
 
                 render::color(
                     p.x.fract().abs() * c,
