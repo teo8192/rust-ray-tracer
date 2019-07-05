@@ -68,13 +68,20 @@ fn main() -> Result<(), String> {
             &mut scale,
         );
 
+        let (w, h) = canvas.output_size()?;
+
+        println!("{} {}", w, h);
+
         let get_color = |x, y| -> u32 {
-            rays::Ray::from_camdir(&camdir, rays::CamDir::uv(x, y, w / scale, h / scale))
-                .intersection(&objects)
+            rays::Ray::from_camdir(
+                &camdir,
+                rays::CamDir::uv(x, y, w as usize / scale, h as usize / scale),
+            )
+            .intersection(&objects)
         };
 
-        for x in 0..w / scale {
-            for y in 0..h / scale {
+        for x in 0..w as usize / scale {
+            for y in 0..h as usize / scale {
                 let color = get_color(x, y);
                 canvas.set_draw_color(color_to_rgb(color));
                 canvas.fill_rect(Rect::new(
