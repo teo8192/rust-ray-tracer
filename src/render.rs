@@ -1,3 +1,5 @@
+//! Stuff to do with rendering to screen
+
 use sdl2::video::WindowSurfaceRef;
 
 pub struct Pixels {
@@ -17,6 +19,7 @@ fn cap(c: f32, min: f32, max: f32) -> f32 {
     c
 }
 
+/// Rurn rgb (float between 0 and 1) to a unsigned interger kind of like HTML notation
 pub fn color(r: f32, g: f32, b: f32) -> u32 {
     let r = cap(r, 0., 1.);
     let g = cap(g, 0., 1.);
@@ -41,6 +44,7 @@ impl Pixels {
         Pixels { pixels, w, h }
     }
 
+    /// Sets a pixel in the pixel array to a color
     pub fn set_pixel(&mut self, x: usize, y: usize, color: u32) -> Result<(), &str> {
         if x >= self.w || y > self.h {
             return Err("Out of bouds");
@@ -50,6 +54,7 @@ impl Pixels {
         Ok(())
     }
 
+    /// Copies the pixel array to a surface
     pub fn copy_to_surface(&mut self, surface: &WindowSurfaceRef) -> () {
         let (w, h) = surface.size();
         unsafe {
@@ -62,10 +67,12 @@ impl Pixels {
         ()
     }
 
+    /// Sets the color of all pixels to black
     pub fn clear(&mut self) -> () {
         self.fill_color(0);
     }
 
+    /// Sets the color of all pixels to the input color
     pub fn fill_color(&mut self, color: u32) -> () {
         for x in 0..self.w {
             for y in 0..self.h {
