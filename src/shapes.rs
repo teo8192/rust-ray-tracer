@@ -68,12 +68,15 @@ pub struct Material {
     pub normal: Option<Vector3<f32>>,
 }
 
+/// An infinetly long tube
 pub struct Cylinder {
     radius: f32,
     origin: Point3<f32>,
 }
 
 impl Cylinder {
+    /// Origin is some point inside the tube. Since the tube is infinite in the z-direction, only
+    /// the xy components of the origin vector is relevant.
     pub fn new(radius: f32, origin: Point3<f32>) -> Cylinder {
         Cylinder { radius, origin }
     }
