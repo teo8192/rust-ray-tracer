@@ -81,94 +81,43 @@ impl Ray {
     }
 
     fn closest_material_helper(
-        &self,
-        materials: &mut Vec<Material>,
+        materials: &mut Vec<Option<Material>>,
         material: Material,
-        t: f32,
     ) -> Material {
-        let new_material_maybe = materials.pop();
-        match new_material_maybe {
+        match materials.pop() {
             None => material,
             Some(new_material) => match new_material {
-                Material::Nothing => self.closest_material_helper(materials, material, t),
-                Material::Spheroid(t1, n) => {
-                    if t1 < t {
-                        self.closest_material_helper(materials, Material::Spheroid(t1, n), t1)
+                None => material,
+                Some(new_material) => {
+                    if new_material.t < material.t {
+                        Ray::closest_material_helper(materials, new_material)
                     } else {
-                        self.closest_material_helper(materials, material, t)
-                    }
-                }
-                Material::Plane(t1, n) => {
-                    if t1 < t {
-                        self.closest_material_helper(materials, Material::Plane(t1, n), t1)
-                    } else {
-                        self.closest_material_helper(materials, material, t)
-                    }
-                }
-                Material::Hyperboloid(t1) => {
-                    if t1 < t {
-                        self.closest_material_helper(materials, Material::Hyperboloid(t1), t1)
-                    } else {
-                        self.closest_material_helper(materials, material, t)
-                    }
-                }
-                Material::Torus(t1) => {
-                    if t1 < t {
-                        self.closest_material_helper(materials, Material::Torus(t1), t1)
-                    } else {
-                        self.closest_material_helper(materials, material, t)
-                    }
-                }
-                Material::Cylinder(t1) => {
-                    if t1 < t {
-                        self.closest_material_helper(materials, Material::Cylinder(t1), t1)
-                    } else {
-                        self.closest_material_helper(materials, material, t)
+                        material
                     }
                 }
             },
         }
     }
 
-    fn closest_material(&self, materials: &mut Vec<Material>) -> Material {
-        let material = materials.pop();
-        match material {
-            None => Material::Nothing,
+    fn closest_material(&self, materials: &mut Vec<Option<Material>>) -> Option<Material> {
+        match materials.pop() {
             Some(material) => match material {
-                Material::Nothing => self.closest_material(materials),
-                Material::Spheroid(t, n) => {
-                    self.closest_material_helper(materials, Material::Spheroid(t, n), t)
-                }
-                Material::Hyperboloid(t) => {
-                    self.closest_material_helper(materials, Material::Hyperboloid(t), t)
-                }
-                Material::Torus(t) => {
-                    self.closest_material_helper(materials, Material::Torus(t), t)
-                }
-                Material::Cylinder(t) => {
-                    self.closest_material_helper(materials, Material::Cylinder(t), t)
-                }
-                Material::Plane(t, n) => {
-                    self.closest_material_helper(materials, Material::Plane(t, n), t)
-                }
+                Some(mat) => Some(Ray::closest_material_helper(materials, mat)),
+                None => None,
             },
+            None => None,
         }
     }
 
     /// Find the closest intersection point to the ray origin, an return a color in HTML notation.
     pub fn intersection(&self, shapes: &shapes::Shapes) -> u32 {
-        let mut materials: Vec<Material> = shapes
+        let mut materials: Vec<Option<Material>> = shapes
             .shapes
             .iter()
-            .map(|x| -> Material {
-                match x.intersection(&self) {
-                    Ok(material) => material,
-                    Err(_) => Material::Nothing,
-                }
-            })
+            .map(|x| -> Option<Material> { x.intersection(&self) })
             .filter(|x| -> bool {
                 match x {
-                    Material::Nothing => false,
+                    None => false,
                     _ => true,
                 }
             })
@@ -179,12 +128,7 @@ impl Ray {
 
     /// Return the color of a single intersection with a shape
     pub fn single_intersection(self, shape: &shapes::Shape) -> u32 {
-        let material = match shape.intersection(&self) {
-            Ok(mat) => mat,
-            Err(_) => Material::Nothing,
-        };
-
-        self.col(material)
+        self.col(shape.intersection(&self))
     }
 
     fn light(&self, normal: Vector3<f32>) -> f32 {
@@ -197,39 +141,26 @@ impl Ray {
     }
 
     /// Returns the color of a material
-    pub fn col(&self, material: Material) -> u32 {
+    pub fn col(&self, material: Option<Material>) -> u32 {
         match material {
-            Material::Spheroid(_t, n) => {
-                let c = self.light(n);
+            Some(material) => match material.normal {
+                Some(normal) => {
+                    let c = self.light(normal);
+                    let p = self.origin + material.t * self.direction;
 
-                render::color(c, c, c)
-            }
-            Material::Hyperboloid(t) => {
-                let p = self.origin + t * self.direction;
+                    render::color(
+                        p.x.fract().abs() * c,
+                        p.y.fract().abs() * c,
+                        p.z.fract().abs() * c,
+                    )
+                }
+                None => {
+                    let p = self.origin + material.t * self.direction;
 
-                render::color(p.x.fract().abs(), p.y.fract().abs(), p.z.fract().abs())
-            }
-            Material::Torus(t) => {
-                let p = self.origin + t * self.direction;
-
-                render::color(p.x.fract().abs(), p.y.fract().abs(), p.z.fract().abs())
-            }
-            Material::Cylinder(t) => {
-                let p = self.origin + t * self.direction;
-
-                render::color(p.x.fract().abs(), p.y.fract().abs(), p.z.fract().abs())
-            }
-            Material::Plane(t, n) => {
-                let p = self.origin + t * self.direction;
-                let c = self.light(n);
-
-                render::color(
-                    p.x.fract().abs() * c,
-                    p.y.fract().abs() * c,
-                    p.z.fract().abs() * c,
-                )
-            }
-            Material::Nothing => 0,
+                    render::color(p.x.fract().abs(), p.y.fract().abs(), p.z.fract().abs())
+                }
+            },
+            None => 0,
         }
     }
 }

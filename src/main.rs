@@ -50,15 +50,17 @@ fn main() -> Result<(), String> {
     let mut camdir = rays::CamDir::new(origin, Point3::new(0., 0., 0.));
 
     //let hyperboloid =
-    //shapes::Hyperboloid::new(-1., Point3::new(0., 0., 0.), Vector3::new(1., 0.5, 1.));
-    //let sphere = shapes::Spheroid::new(2.1, Point3::new(0., 0., 0.), Vector3::new(1., 1., 0.7));
-    //let plane = shapes::Plane::new(Vector3::new(0., 1., 0.), Point3::new(0., 0., 0.));
-    let torus = shapes::Torus::new(0.3, 1., Point3::new(0., 0., 0.));
+    //shapes::Hyperboloid::new(-1., Point3::new(0., 0., 0.), Vector3::new(1., 1., 1.));
+    let spheroid = shapes::Spheroid::new(2.1, Point3::new(0., 0., 0.), Vector3::new(1., 1., 1.));
+    let plane = shapes::Plane::new(Vector3::new(0., 1., 0.), Point3::new(0., -5.1, 0.));
+    //let torus = shapes::Torus::new(0.3, 1., Point3::new(0., 0., 0.));
+    //let cylinder = shapes::Cylinder::new(0.9, Point3::new(0., 0., 0.));
     let mut objects = shapes::Shapes::new();
-    objects.add(&torus);
-    //objects.add(&sphere);
+    //objects.add(&cylinder);
+    //objects.add(&torus);
+    objects.add(&spheroid);
     //objects.add(&hyperboloid);
-    //objects.add(&plane);
+    objects.add(&plane);
 
     let mut running = true;
     while running {

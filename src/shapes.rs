@@ -10,39 +10,36 @@ use roots::Roots;
 
 /// If the point on the ray is behind the camera
 /// or have values like NaN and inf
-pub enum IntersectErr {
-    IsBehind,
-    Other,
-}
 
-fn abc(a: f32, b: f32, c: f32) -> Result<f32, IntersectErr> {
+fn abc(a: f32, b: f32, c: f32) -> Option<f32> {
     let num = b * b - 4. * a * c;
+
     if num < 0. {
-        return Err(IntersectErr::IsBehind);
+        None
+    } else {
+        let t1 = (-b + num.sqrt()) / (2. * a);
+        let t2 = (-b - num.sqrt()) / (2. * a);
+
+        min_g0(t1, t2)
     }
-
-    let t1 = (-b + num.sqrt()) / (2. * a);
-    let t2 = (-b - num.sqrt()) / (2. * a);
-
-    min_g0(t1, t2)
 }
 
-fn min_g0(a: f32, b: f32) -> Result<f32, IntersectErr> {
+fn min_g0(a: f32, b: f32) -> Option<f32> {
     if a < 0. && b < 0. {
-        Err(IntersectErr::IsBehind)
+        None
     } else if a < 0. || b <= a {
-        Ok(b)
+        Some(b)
     } else if b < 0. || a <= b {
-        Ok(a)
+        Some(a)
     } else {
-        Err(IntersectErr::Other)
+        None
     }
 }
 
 /// A shape is something that may intersect a ray at some point in space
 pub trait Shape {
     /// The intersection closest point between the shape and a ray, it it exists
-    fn intersection(&self, ray: &rays::Ray) -> Result<Material, IntersectErr>;
+    fn intersection(&self, ray: &rays::Ray) -> Option<Material>;
 }
 
 /// Contains some shapes that a ray can intersect with.
@@ -65,13 +62,9 @@ impl<'a> Shapes<'a> {
 }
 
 /// The material of a point
-pub enum Material {
-    Nothing,
-    Spheroid(f32, Vector3<f32>),
-    Hyperboloid(f32),
-    Plane(f32, Vector3<f32>),
-    Torus(f32),
-    Cylinder(f32),
+pub struct Material {
+    pub t: f32,
+    pub normal: Option<Vector3<f32>>,
 }
 
 pub struct Cylinder {
@@ -86,17 +79,17 @@ impl Cylinder {
 }
 
 impl Shape for Cylinder {
-    fn intersection(&self, ray: &rays::Ray) -> Result<Material, IntersectErr> {
+    fn intersection(&self, ray: &rays::Ray) -> Option<Material> {
         let origin = ray.origin - self.origin;
-        let sq = |x| -> f32 {x * x};
+        let sq = |x| -> f32 { x * x };
 
         let a = sq(ray.direction.x) + sq(ray.direction.y);
         let b = 2. * (origin.x * ray.direction.x + origin.y * ray.direction.y);
         let c = sq(origin.x) + sq(origin.y) - sq(self.radius);
 
         match abc(a, b, c) {
-            Ok(t) => Ok(Material::Cylinder(t)),
-            Err(err) => Err(err),
+            Some(t) => Some(Material { t, normal: None }),
+            None => None,
         }
     }
 }
@@ -119,7 +112,7 @@ impl Torus {
 }
 
 impl Shape for Torus {
-    fn intersection(&self, ray: &rays::Ray) -> Result<Material, IntersectErr> {
+    fn intersection(&self, ray: &rays::Ray) -> Option<Material> {
         let sq = |x| -> f32 { x * x };
 
         let Rsq = sq(self.inner_radius);
@@ -180,9 +173,9 @@ impl Shape for Torus {
         };
 
         if t < 0. {
-            Err(IntersectErr::IsBehind)
+            None
         } else {
-            Ok(Material::Torus(t))
+            Some(Material { t, normal: None })
         }
     }
 }
@@ -207,7 +200,7 @@ impl Plane {
 }
 
 impl Shape for Plane {
-    fn intersection(&self, ray: &rays::Ray) -> Result<Material, IntersectErr> {
+    fn intersection(&self, ray: &rays::Ray) -> Option<Material> {
         let origin = ray.origin - self.origin;
         let denom = self.normal.x * ray.direction.x
             + self.normal.y * ray.direction.y
@@ -215,16 +208,19 @@ impl Shape for Plane {
 
         if denom == 0. {
             // Looking parallell to the plane
-            Err(IntersectErr::Other)
+            None
         } else {
             let t =
                 -(self.normal.x * origin.x + self.normal.y * origin.y + self.normal.x * origin.y)
                     / denom;
             if t <= 0. {
                 // plane is behind
-                Err(IntersectErr::Other)
+                None
             } else {
-                Ok(Material::Plane(t, self.normal))
+                Some(Material {
+                    t,
+                    normal: Some(self.normal),
+                })
             }
         }
     }
@@ -259,7 +255,7 @@ impl Hyperboloid {
 }
 
 impl Shape for Hyperboloid {
-    fn intersection(&self, ray: &rays::Ray) -> Result<Material, IntersectErr> {
+    fn intersection(&self, ray: &rays::Ray) -> Option<Material> {
         let square = |num: f32| -> f32 { num * num };
 
         let mut origin = ray.origin - self.origin;
@@ -277,8 +273,8 @@ impl Shape for Hyperboloid {
         let c = square(origin.x) + square(origin.y) - square(origin.z) - self.lambda;
 
         match abc(a, b, c) {
-            Ok(t) => Ok(Material::Hyperboloid(t)),
-            Err(err) => Err(err),
+            Some(t) => Some(Material { t, normal: None }),
+            None => None,
         }
     }
 }
@@ -306,7 +302,7 @@ impl Spheroid {
 }
 
 impl Shape for Spheroid {
-    fn intersection(&self, ray: &rays::Ray) -> Result<Material, IntersectErr> {
+    fn intersection(&self, ray: &rays::Ray) -> Option<Material> {
         let mut origin = ray.origin - self.origin;
         origin.x /= self.dimensions.x;
         origin.y /= self.dimensions.y;
@@ -322,8 +318,11 @@ impl Shape for Spheroid {
         let c = origin.magnitude2() - self.radius * self.radius;
 
         match abc(a, b, c) {
-            Ok(t) => Ok(Material::Spheroid(t, (origin + t * direction).normalize())),
-            Err(err) => Err(err),
+            Some(t) => Some(Material {
+                t,
+                normal: Some((origin + t * direction).normalize()),
+            }),
+            None => None,
         }
     }
 }
