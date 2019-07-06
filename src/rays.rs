@@ -65,19 +65,16 @@ impl Ray {
         Ray {
             origin,
             direction,
-            light: Vector3::new(1., 2., -3.).normalize(),
+            light: Vector3::new(1., 1., -1.).normalize(),
         }
     }
 
     /// Returns a new ray calculated from the variables in the Camera
     pub fn from_camdir(camdir: &CamDir, uv: Vector2<f32>) -> Ray {
-        let direction = (uv.x * camdir.cr + uv.y * camdir.cu + 2. * camdir.cf).normalize();
-        let origin = camdir.origin;
-        Ray {
-            origin,
-            direction,
-            light: Vector3::new(1., 2., -3.).normalize(),
-        }
+        Ray::new(
+            camdir.origin,
+            (uv.x * camdir.cr + uv.y * camdir.cu + 2. * camdir.cf).normalize(),
+        )
     }
 
     fn closest_material_helper(
@@ -111,24 +108,37 @@ impl Ray {
 
     /// Find the closest intersection point to the ray origin, an return a color in HTML notation.
     pub fn intersection(&self, shapes: &shapes::Shapes) -> u32 {
-        let mut materials: Vec<Option<Material>> = shapes
-            .shapes
-            .iter()
-            .map(|x| -> Option<Material> { x.intersection(&self) })
-            .filter(|x| -> bool {
-                match x {
-                    None => false,
-                    _ => true,
-                }
-            })
-            .collect();
+        let (r, g, b, p) = self.col(
+            self.closest_material(
+                &mut shapes
+                    .shapes
+                    .iter()
+                    .map(|x| -> Option<Material> { x.intersection(&self) })
+                    .filter(|x| -> bool {
+                        match x {
+                            None => false,
+                            _ => true,
+                        }
+                    })
+                    .collect(),
+            ),
+        );
 
-        self.col(self.closest_material(&mut materials))
+        let l = match p {
+            Some(p) => {
+                let (light, _) = self.bounce(&shapes, p);
+                light
+            }
+            None => 1.,
+        };
+
+        render::color(r * l, g * l, b * l)
     }
 
     /// Return the color of a single intersection with a shape
-    pub fn single_intersection(self, shape: &shapes::Shape) -> u32 {
-        self.col(shape.intersection(&self))
+    pub fn single_intersection(&self, shape: &shapes::Shape) -> u32 {
+        let (r, g, b, _) = self.col(shape.intersection(&self));
+        render::color(r, g, b)
     }
 
     fn light(&self, normal: Vector3<f32>) -> f32 {
@@ -140,27 +150,52 @@ impl Ray {
         }
     }
 
+    fn bounce(&self, shapes: &shapes::Shapes, point: Point3<f32>) -> (f32, Option<Point3<f32>>) {
+        match self.closest_material(
+            &mut shapes
+                .shapes
+                .iter()
+                .map(|x| -> Option<Material> { x.intersection(&Ray::new(point, self.light)) })
+                .filter(|x| -> bool {
+                    match x {
+                        None => false,
+                        _ => true,
+                    }
+                })
+                .collect(),
+        ) {
+            Some(material) => (0.3, Some(point + material.t * self.light)),
+            None => (1., None),
+        }
+    }
+
     /// Returns the color of a material
-    pub fn col(&self, material: Option<Material>) -> u32 {
+    pub fn col(&self, material: Option<Material>) -> (f32, f32, f32, Option<Point3<f32>>) {
         match material {
             Some(material) => match material.normal {
                 Some(normal) => {
                     let c = self.light(normal);
                     let p = self.origin + material.t * self.direction;
 
-                    render::color(
+                    (
                         p.x.fract().abs() * c,
                         p.y.fract().abs() * c,
                         p.z.fract().abs() * c,
+                        Some(p),
                     )
                 }
                 None => {
                     let p = self.origin + material.t * self.direction;
 
-                    render::color(p.x.fract().abs(), p.y.fract().abs(), p.z.fract().abs())
+                    (
+                        p.x.fract().abs(),
+                        p.y.fract().abs(),
+                        p.z.fract().abs(),
+                        Some(p),
+                    )
                 }
             },
-            None => 0,
+            None => (0., 0., 0., None),
         }
     }
 }

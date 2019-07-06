@@ -8,9 +8,10 @@ use cgmath::*;
 use roots::find_roots_quartic;
 use roots::Roots;
 
+const MIN_T: f32 = 0.01;
+
 /// If the point on the ray is behind the camera
 /// or have values like NaN and inf
-
 fn abc(a: f32, b: f32, c: f32) -> Option<f32> {
     let num = b * b - 4. * a * c;
 
@@ -25,11 +26,11 @@ fn abc(a: f32, b: f32, c: f32) -> Option<f32> {
 }
 
 fn min_g0(a: f32, b: f32) -> Option<f32> {
-    if a < 0. && b < 0. {
+    if a < MIN_T && b < MIN_T {
         None
-    } else if a < 0. || b <= a {
+    } else if a < MIN_T || b <= a {
         Some(b)
-    } else if b < 0. || a <= b {
+    } else if b < MIN_T || a <= b {
         Some(a)
     } else {
         None
@@ -88,7 +89,14 @@ impl Shape for Cylinder {
         let c = sq(origin.x) + sq(origin.y) - sq(self.radius);
 
         match abc(a, b, c) {
-            Some(t) => Some(Material { t, normal: None }),
+            Some(t) => {
+                let origin = Vector3::new(ray.origin.x, ray.origin.y, ray.origin.z);
+                let mut normal = origin + ray.direction * t;
+                normal.z = 0.;
+                let normal = Some(normal);
+
+                Some(Material { t, normal })
+            }
             None => None,
         }
     }
@@ -137,13 +145,13 @@ impl Shape for Torus {
         let t = match find_roots_quartic(a, b, c, d, e) {
             Roots::Four(roots) => {
                 let mut min_root = roots[0];
-                if roots[1] < min_root && roots[1] > 0. {
+                if roots[1] < min_root && roots[1] > MIN_T {
                     min_root = roots[1];
                 }
-                if roots[2] < min_root && roots[2] > 0. {
+                if roots[2] < min_root && roots[2] > MIN_T {
                     min_root = roots[2];
                 }
-                if roots[3] < min_root && roots[3] > 0. {
+                if roots[3] < min_root && roots[3] > MIN_T {
                     min_root = roots[3];
                 }
 
@@ -151,10 +159,10 @@ impl Shape for Torus {
             }
             Roots::Three(roots) => {
                 let mut min_root = roots[0];
-                if roots[1] < min_root && roots[1] > 0. {
+                if roots[1] < min_root && roots[1] > MIN_T {
                     min_root = roots[1];
                 }
-                if roots[2] < min_root && roots[2] > 0. {
+                if roots[2] < min_root && roots[2] > MIN_T {
                     min_root = roots[2];
                 }
 
@@ -162,7 +170,7 @@ impl Shape for Torus {
             }
             Roots::Two(roots) => {
                 let mut min_root = roots[0];
-                if roots[1] < min_root && roots[1] > 0. {
+                if roots[1] < min_root && roots[1] > MIN_T {
                     min_root = roots[1];
                 }
 
@@ -213,7 +221,7 @@ impl Shape for Plane {
             let t =
                 -(self.normal.x * origin.x + self.normal.y * origin.y + self.normal.x * origin.y)
                     / denom;
-            if t <= 0. {
+            if t <= MIN_T {
                 // plane is behind
                 None
             } else {

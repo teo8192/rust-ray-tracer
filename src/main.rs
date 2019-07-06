@@ -50,7 +50,7 @@ fn main() -> Result<(), String> {
     let mut camdir = rays::CamDir::new(origin, Point3::new(0., 0., 0.));
 
     //let hyperboloid =
-    //shapes::Hyperboloid::new(-1., Point3::new(0., 0., 0.), Vector3::new(1., 1., 1.));
+    //shapes::Hyperboloid::new(-10., Point3::new(0., 0., 0.), Vector3::new(1., 1., 1.));
     let spheroid = shapes::Spheroid::new(2.1, Point3::new(0., 0., 0.), Vector3::new(1., 1., 1.));
     let plane = shapes::Plane::new(Vector3::new(0., 1., 0.), Point3::new(0., -5.1, 0.));
     //let torus = shapes::Torus::new(0.3, 1., Point3::new(0., 0., 0.));
@@ -84,8 +84,7 @@ fn main() -> Result<(), String> {
 
         for x in 0..w as usize / scale {
             for y in 0..h as usize / scale {
-                let color = get_color(x, y);
-                canvas.set_draw_color(color_to_rgb(color));
+                canvas.set_draw_color(color_to_rgb(get_color(x, y)));
                 canvas.fill_rect(Rect::new(
                     (x * scale) as i32,
                     (y * scale) as i32,
