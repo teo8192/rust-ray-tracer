@@ -11,7 +11,7 @@ use cgmath::*;
 pub struct Ray {
     pub origin: Point3<f32>,
     pub direction: Vector3<f32>,
-    light: Vector3<f32>,
+    light: Point3<f32>,
 }
 
 /// Contains some variables common for all rays
@@ -65,7 +65,7 @@ impl Ray {
         Ray {
             origin,
             direction,
-            light: Vector3::new(1., 1., -1.).normalize(),
+            light: Point3::new(0., 1000., 0.),
         }
     }
 
@@ -107,8 +107,13 @@ impl Ray {
     }
 
     fn bounce(&self, shapes: &shapes::Shapes, point: Point3<f32>) -> (f32, Option<Point3<f32>>) {
-        match self.closest_material(&mut shapes.shapes(&Ray::new(point, self.light))) {
-            Some(material) => (0.3, Some(point + material.t * self.light)),
+        match self.closest_material(
+            &mut shapes.shapes(&Ray::new(point, (self.light - point).normalize())),
+        ) {
+            Some(material) => (
+                0.3,
+                Some(point + material.t * (self.light - point).normalize()),
+            ),
             None => (1., None),
         }
     }
@@ -134,8 +139,8 @@ impl Ray {
         render::color(r, g, b)
     }
 
-    fn light(&self, normal: Vector3<f32>) -> f32 {
-        let c = normal.dot(self.light);
+    fn light(&self, normal: Vector3<f32>, point: Point3<f32>) -> f32 {
+        let c = normal.dot((self.light - point).normalize());
         if c < 0. {
             0.
         } else {
@@ -148,8 +153,8 @@ impl Ray {
         match material {
             Some(material) => match material.normal {
                 Some(normal) => {
-                    let c = self.light(normal);
                     let p = self.origin + material.t * self.direction;
+                    let c = self.light(normal, p);
 
                     (
                         p.x.fract().abs() * c,
