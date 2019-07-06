@@ -47,7 +47,7 @@ pub trait Shape {
 /// This should be passed in to a ray, so the ray can calculate the color if the intersection
 /// point.
 pub struct Shapes<'a> {
-    pub shapes: Vec<&'a Shape>,
+    shapes: Vec<&'a Shape>,
 }
 
 impl<'a> Shapes<'a> {
@@ -59,6 +59,10 @@ impl<'a> Shapes<'a> {
     /// Add a shape the the collection of shapes
     pub fn add<S: Shape>(&mut self, shape: &'a S) {
         self.shapes.push(shape);
+    }
+
+    pub fn shapes(&self) -> &Vec<&'a Shape> {
+        &self.shapes
     }
 }
 

@@ -106,23 +106,33 @@ impl Ray {
         }
     }
 
+    fn filter_shapes(shapes: &shapes::Shapes, ray: &Ray) -> Vec<Option<Material>> {
+        shapes
+            .shapes()
+            .iter()
+            .map(|x| -> Option<Material> { x.intersection(&ray) })
+            .filter(|x| -> bool {
+                match x {
+                    None => false,
+                    _ => true,
+                }
+            })
+            .collect()
+    }
+
+    fn bounce(&self, shapes: &shapes::Shapes, point: Point3<f32>) -> (f32, Option<Point3<f32>>) {
+        match self.closest_material(&mut Ray::filter_shapes(
+            &shapes,
+            &Ray::new(point, self.light),
+        )) {
+            Some(material) => (0.3, Some(point + material.t * self.light)),
+            None => (1., None),
+        }
+    }
+
     /// Find the closest intersection point to the ray origin, an return a color in HTML notation.
     pub fn intersection(&self, shapes: &shapes::Shapes) -> u32 {
-        let (r, g, b, p) = self.col(
-            self.closest_material(
-                &mut shapes
-                    .shapes
-                    .iter()
-                    .map(|x| -> Option<Material> { x.intersection(&self) })
-                    .filter(|x| -> bool {
-                        match x {
-                            None => false,
-                            _ => true,
-                        }
-                    })
-                    .collect(),
-            ),
-        );
+        let (r, g, b, p) = self.col(self.closest_material(&mut Ray::filter_shapes(&shapes, &self)));
 
         let l = match p {
             Some(p) => {
@@ -147,25 +157,6 @@ impl Ray {
             0.
         } else {
             c
-        }
-    }
-
-    fn bounce(&self, shapes: &shapes::Shapes, point: Point3<f32>) -> (f32, Option<Point3<f32>>) {
-        match self.closest_material(
-            &mut shapes
-                .shapes
-                .iter()
-                .map(|x| -> Option<Material> { x.intersection(&Ray::new(point, self.light)) })
-                .filter(|x| -> bool {
-                    match x {
-                        None => false,
-                        _ => true,
-                    }
-                })
-                .collect(),
-        ) {
-            Some(material) => (0.3, Some(point + material.t * self.light)),
-            None => (1., None),
         }
     }
 
