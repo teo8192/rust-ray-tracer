@@ -57,7 +57,7 @@ impl<'a> Shapes<'a> {
     }
 
     /// Add a shape the the collection of shapes
-    pub fn add(&mut self, shape: &'a Shape) {
+    pub fn add<S: Shape>(&mut self, shape: &'a S) {
         self.shapes.push(shape);
     }
 }

@@ -136,7 +136,7 @@ impl Ray {
     }
 
     /// Return the color of a single intersection with a shape
-    pub fn single_intersection(&self, shape: &shapes::Shape) -> u32 {
+    pub fn single_intersection<S: shapes::Shape>(&self, shape: &S) -> u32 {
         let (r, g, b, _) = self.col(shape.intersection(&self));
         render::color(r, g, b)
     }
