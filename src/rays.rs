@@ -11,7 +11,7 @@ use cgmath::*;
 pub struct Ray {
     pub origin: Point3<f32>,
     pub direction: Vector3<f32>,
-    light: Point3<f32>,
+    lights: Vec<Point3<f32>>,
 }
 
 /// Contains some variables common for all rays
@@ -61,11 +61,14 @@ impl CamDir {
 impl Ray {
     pub fn new(origin: Point3<f32>, direction: Vector3<f32>) -> Ray {
         let direction = direction.normalize();
+        let mut lights: Vec<Point3<f32>> = Vec::new();
+        lights.push(Point3::new(0., 1000., 0.));
+        lights.push(Point3::new(10., 10., 0.));
 
         Ray {
             origin,
             direction,
-            light: Point3::new(0., 1000., 0.),
+            lights,
         }
     }
 
@@ -107,15 +110,26 @@ impl Ray {
     }
 
     fn bounce(&self, shapes: &shapes::Shapes, point: Point3<f32>) -> (f32, Option<Point3<f32>>) {
-        match self.closest_material(
-            &mut shapes.shapes(&Ray::new(point, (self.light - point).normalize())),
-        ) {
-            Some(material) => (
-                0.3,
-                Some(point + material.t * (self.light - point).normalize()),
-            ),
-            None => (1., None),
+        let get_light = |light_source: Point3<f32>| -> (f32, Option<Point3<f32>>) {
+            match self.closest_material(
+                &mut shapes.shapes(&Ray::new(point, (light_source - point).normalize())),
+            ) {
+                Some(material) => (
+                    0.3,
+                    Some(point + material.t * (light_source - point).normalize()),
+                ),
+                None => (1., None),
+            }
+        };
+        let mut avg = 0.;
+        let mut num = 0.;
+        for light in &self.lights {
+            let (light, _) = get_light(*light);
+            num += 1.;
+            avg += light;
         }
+
+        (avg / num, None)
     }
 
     /// Find the closest intersection point to the ray origin, an return a color in HTML notation.
@@ -140,7 +154,13 @@ impl Ray {
     }
 
     fn light(&self, normal: Vector3<f32>, point: Point3<f32>) -> f32 {
-        let c = normal.dot((self.light - point).normalize());
+        let mut avg = 0.;
+        let mut num = 0.;
+        for light in &self.lights {
+            avg += normal.dot((light - point).normalize());
+            num += 1.;
+        }
+        let c = avg / num;
         if c < 0. {
             0.
         } else {
