@@ -7,6 +7,22 @@ use super::shapes;
 use super::shapes::Material;
 use cgmath::*;
 
+fn max(a: f32, b: f32) -> f32 {
+    if a > b {
+        a
+    } else {
+        b
+    }
+}
+
+fn min(a: f32, b: f32) -> f32 {
+    if a < b {
+        a
+    } else {
+        b
+    }
+}
+
 /// A single ray from the camera through a pixel
 pub struct Ray {
     pub origin: Point3<f32>,
@@ -62,8 +78,8 @@ impl Ray {
     pub fn new(origin: Point3<f32>, direction: Vector3<f32>) -> Ray {
         let direction = direction.normalize();
         let mut lights: Vec<Point3<f32>> = Vec::new();
-        lights.push(Point3::new(0., 1000., 0.));
-        lights.push(Point3::new(10., 10., 0.));
+        //lights.push(Point3::new(0., 1000., 0.));
+        lights.push(Point3::new(5., 5., 0.));
 
         Ray {
             origin,
@@ -168,13 +184,35 @@ impl Ray {
         }
     }
 
+    pub fn light_intensity(&self) -> f32 {
+        let mut intensity = 0.;
+        for light in &self.lights {
+            intensity += (self.direction.cross(light - self.origin)).magnitude();
+        }
+        min(0.1 / intensity, 1.)
+    }
+
     /// Returns the color of a material
     pub fn col(&self, material: Option<Material>) -> (f32, f32, f32, Option<Point3<f32>>) {
         match material {
             Some(material) => match material.normal {
                 Some(normal) => {
                     let p = self.origin + material.t * self.direction;
-                    let c = self.light(normal, p);
+                    let c = self.light(normal, p) + self.light_intensity();
+
+                    (
+                        //p.x.fract().abs() * c,
+                        //p.y.fract().abs() * c,
+                        //p.z.fract().abs() * c,
+                        c,
+                        c,
+                        c,
+                        Some(p),
+                    )
+                }
+                None => {
+                    let p = self.origin + material.t * self.direction;
+                    let c = self.light_intensity();
 
                     (
                         p.x.fract().abs() * c,
@@ -183,18 +221,11 @@ impl Ray {
                         Some(p),
                     )
                 }
-                None => {
-                    let p = self.origin + material.t * self.direction;
-
-                    (
-                        p.x.fract().abs(),
-                        p.y.fract().abs(),
-                        p.z.fract().abs(),
-                        Some(p),
-                    )
-                }
             },
-            None => (0., 0., 0., None),
+            None => {
+                let c = self.light_intensity();
+                (c, c, c, None)
+            }
         }
     }
 }
