@@ -61,8 +61,17 @@ impl<'a> Shapes<'a> {
         self.shapes.push(shape);
     }
 
-    pub fn shapes(&self) -> &Vec<&'a Shape> {
-        &self.shapes
+    pub fn shapes(&self, ray: &rays::Ray) -> Vec<Option<Material>> {
+           self.shapes
+            .iter()
+            .map(|x| -> Option<Material> { x.intersection(&ray) })
+            .filter(|x| -> bool {
+                match x {
+                    None => false,
+                    _ => true,
+                }
+            })
+            .collect()
     }
 }
 
