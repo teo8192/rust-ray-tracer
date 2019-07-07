@@ -8,6 +8,27 @@ use cgmath::*;
 use roots::find_roots_quartic;
 use roots::Roots;
 
+use std::ops::Add;
+
+macro_rules! shape_add {
+    ( $($t:ident)* ) => {
+        $(
+            impl<'a> Add<&'a Shape> for &'a $t {
+                type Output = Shapes<'a>;
+
+                fn add(self, other: &'a Shape) -> Shapes<'a> {
+                    let mut shapes: Vec<&'a Shape> = Vec::new();
+                    shapes.push(self);
+                    shapes.push(other);
+                    Shapes { shapes }
+                }
+            }
+        )*
+    }
+}
+
+shape_add!(Plane Hyperboloid Torus Cylinder Spheroid);
+
 const MIN_T: f32 = 0.01;
 
 /// If the point on the ray is behind the camera
@@ -48,6 +69,19 @@ pub trait Shape {
 /// point.
 pub struct Shapes<'a> {
     shapes: Vec<&'a Shape>,
+}
+
+impl<'a> Add<&'a Shape> for Shapes<'a> {
+    type Output = Shapes<'a>;
+
+    fn add(self, other: &'a Shape) -> Shapes<'a> {
+        let mut shapes = Vec::new();
+        for shape in &self.shapes {
+            shapes.push(*shape);
+        }
+        shapes.push(other);
+        Shapes { shapes }
+    }
 }
 
 impl<'a> Shapes<'a> {
