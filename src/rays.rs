@@ -7,6 +7,10 @@ use super::shapes;
 use super::shapes::Material;
 use cgmath::*;
 
+fn sigmoid(a: f32) -> f32 {
+    1. / (1. + (-a).exp())
+}
+
 fn max(a: f32, b: f32) -> f32 {
     if a > b {
         a
@@ -80,6 +84,7 @@ impl Ray {
         let mut lights: Vec<Point3<f32>> = Vec::new();
         //lights.push(Point3::new(0., 1000., 0.));
         lights.push(Point3::new(5., 5., 0.));
+        lights.push(Point3::new(-5., 5., 5.));
 
         Ray {
             origin,
@@ -145,7 +150,7 @@ impl Ray {
             avg += light;
         }
 
-        (avg / num, None)
+        (sigmoid(avg), None)
     }
 
     /// Find the closest intersection point to the ray origin, an return a color in HTML notation.
@@ -176,7 +181,7 @@ impl Ray {
             avg += normal.dot((light - point).normalize());
             num += 1.;
         }
-        let c = avg / num;
+        let c = sigmoid(avg);
         if c < 0. {
             0.
         } else {
@@ -187,9 +192,9 @@ impl Ray {
     pub fn light_intensity(&self) -> f32 {
         let mut intensity = 0.;
         for light in &self.lights {
-            intensity += (self.direction.cross(light - self.origin)).magnitude();
+            intensity += (-(self.direction.cross(light - self.origin)).magnitude()).exp();
         }
-        min(0.1 / intensity, 1.)
+        sigmoid(2. * intensity - 2.)
     }
 
     /// Returns the color of a material
