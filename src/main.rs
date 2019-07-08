@@ -31,8 +31,8 @@ fn main() -> Result<(), String> {
     let w: usize = 640;
     let h: usize = 480;
 
-    let w: usize = 1920;
-    let h: usize = 1280;
+    //let w: usize = 1920;
+    //let h: usize = 1280;
 
     let window = video_subsystem
         .window("SDL2", w as u32, h as u32)
@@ -48,8 +48,8 @@ fn main() -> Result<(), String> {
         .build()
         .map_err(|e| e.to_string())?;
 
-    //let mut scale = 8;
-    let mut scale = 20;
+    let mut scale = 8;
+    //let mut scale = 20;
 
     let mut origin: Point3<f32> = Point3::new(0., 2., -10.);
 
@@ -80,32 +80,29 @@ fn main() -> Result<(), String> {
             &mut scale,
         );
 
-        //if scale != prev_scale {
-            //prev_scale = scale;
-            //bands = pixels.chunks_mut(w as usize / scale).enumerate().collect();
-        //}
-
         let (w, h) = canvas.output_size()?;
 
-        let get_color = |x, y| -> u32 {
-            rays::Ray::from_camdir(
-                &camdir,
-                rays::CamDir::uv(x, y, w as usize / scale, h as usize / scale),
-            )
-            .intersection(&shapes)
-        };
-
-        if scale < 50 {
-            for x in 0..w as usize / scale {
-                for y in 0..h as usize / scale {
-                    canvas.set_draw_color(color_to_rgb(get_color(x, y)));
+        macro_rules! color_line {
+            ( $y:expr, $width:expr, $color:expr ) => {
+                for x in 0..$width {
+                    canvas.set_draw_color(color_to_rgb($color(x)));
                     canvas.fill_rect(Rect::new(
                         (x * scale) as i32,
-                        (y * scale) as i32,
+                        ($y * scale) as i32,
                         scale as u32,
                         scale as u32,
                     ))?;
                 }
+            };
+        }
+
+        if scale < 50 {
+            for y in 0..h as usize / scale {
+                color_line!(y, w as usize / scale, |x| rays::Ray::from_camdir(
+                    &camdir,
+                    rays::CamDir::uv(x, y, w as usize / scale, h as usize / scale),
+                )
+                .intersection(&shapes));
             }
         } else {
             (&mut bands)
@@ -123,15 +120,7 @@ fn main() -> Result<(), String> {
                 });
 
             for (y, band) in &bands {
-                for x in 0..w as usize / scale {
-                    canvas.set_draw_color(color_to_rgb(band[x]));
-                    canvas.fill_rect(Rect::new(
-                        (x * scale) as i32,
-                        (y * scale) as i32,
-                        scale as u32,
-                        scale as u32,
-                    ))?;
-                }
+                color_line!(*y, w as usize / scale, |x| band[x]);
             }
         }
 
