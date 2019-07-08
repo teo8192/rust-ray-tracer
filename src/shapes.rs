@@ -59,7 +59,7 @@ fn min_g0(a: f32, b: f32) -> Option<f32> {
 }
 
 /// A shape is something that may intersect a ray at some point in space
-pub trait Shape {
+pub trait Shape: std::marker::Sync {
     /// The intersection closest point between the shape and a ray, it it exists
     fn intersection(&self, ray: &rays::Ray) -> Option<Material>;
 }
