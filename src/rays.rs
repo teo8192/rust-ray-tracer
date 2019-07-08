@@ -106,48 +106,37 @@ impl Ray {
         material: Material,
     ) -> Material {
         match materials.pop() {
-            None => material,
-            Some(new_material) => match new_material {
-                None => material,
-                Some(new_material) => {
-                    if new_material.t < material.t {
-                        Ray::closest_material_helper(materials, new_material)
-                    } else {
-                        material
-                    }
+            Some(Some(new_material)) => {
+                if new_material.t < material.t {
+                    Ray::closest_material_helper(materials, new_material)
+                } else {
+                    material
                 }
-            },
+            }
+            _ => material,
         }
     }
 
     fn closest_material(&self, materials: &mut Vec<Option<Material>>) -> Option<Material> {
         match materials.pop() {
-            Some(material) => match material {
-                Some(mat) => Some(Ray::closest_material_helper(materials, mat)),
-                None => None,
-            },
-            None => None,
+            Some(Some(material)) => Some(Ray::closest_material_helper(materials, material)),
+            _ => None,
         }
     }
 
     fn bounce(&self, shapes: &shapes::Shapes, point: Point3<f32>) -> (f32, Option<Point3<f32>>) {
-        let get_light = |light_source: Point3<f32>| -> (f32, Option<Point3<f32>>) {
-            match self.closest_material(
-                &mut shapes.shapes(&Ray::new(point, (light_source - point).normalize())),
-            ) {
-                Some(material) => (
-                    0.3,
-                    Some(point + material.t * (light_source - point).normalize()),
-                ),
-                None => (1., None),
-            }
-        };
         let mut avg = 0.;
-        let mut num = 0.;
         for light in &self.lights {
-            let (light, _) = get_light(*light);
-            num += 1.;
-            avg += light;
+            avg += if self
+                .closest_material(
+                    &mut shapes.shapes(&Ray::new(point, (*light - point).normalize())),
+                )
+                .is_some()
+            {
+                0.2
+            } else {
+                1.
+            };
         }
 
         (sigmoid(avg), None)
@@ -157,14 +146,12 @@ impl Ray {
     pub fn intersection(&self, shapes: &shapes::Shapes) -> u32 {
         let (r, g, b, p) = self.col(self.closest_material(&mut shapes.shapes(&self)));
 
-        let l = match p {
-            Some(p) => {
-                let (light, _) = self.bounce(&shapes, p);
-                light
-            }
-            None => 1.,
+        let l = if let Some(point) = p {
+            let (light, _) = self.bounce(&shapes, point);
+            light
+        } else {
+            1.
         };
-
         render::color(r * l, g * l, b * l)
     }
 
@@ -176,10 +163,10 @@ impl Ray {
 
     fn light(&self, normal: Vector3<f32>, point: Point3<f32>) -> f32 {
         let mut avg = 0.;
-        let mut num = 0.;
+        //let mut num = 0.;
         for light in &self.lights {
             avg += normal.dot((light - point).normalize());
-            num += 1.;
+            //num += 1.;
         }
         let c = sigmoid(avg);
         if c < 0. {
@@ -199,38 +186,26 @@ impl Ray {
 
     /// Returns the color of a material
     pub fn col(&self, material: Option<Material>) -> (f32, f32, f32, Option<Point3<f32>>) {
+        let c = self.light_intensity();
         match material {
-            Some(material) => match material.normal {
-                Some(normal) => {
-                    let p = self.origin + material.t * self.direction;
-                    let c = self.light(normal, p) + self.light_intensity();
+            Some(material) => {
+                let p = self.origin + material.t * self.direction;
 
-                    (
-                        //p.x.fract().abs() * c,
-                        //p.y.fract().abs() * c,
-                        //p.z.fract().abs() * c,
-                        c,
-                        c,
-                        c,
-                        Some(p),
-                    )
-                }
-                None => {
-                    let p = self.origin + material.t * self.direction;
-                    let c = self.light_intensity();
+                match material.normal {
+                    Some(normal) => {
+                        let c = self.light(normal, p) + c;
 
-                    (
+                        (c, c, c, Some(p))
+                    }
+                    None => (
                         p.x.fract().abs() * c,
                         p.y.fract().abs() * c,
                         p.z.fract().abs() * c,
                         Some(p),
-                    )
+                    ),
                 }
-            },
-            None => {
-                let c = self.light_intensity();
-                (c, c, c, None)
             }
+            None => (c, c, c, None),
         }
     }
 }
