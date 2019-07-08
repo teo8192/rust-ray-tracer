@@ -82,9 +82,10 @@ impl Ray {
     pub fn new(origin: Point3<f32>, direction: Vector3<f32>) -> Ray {
         let direction = direction.normalize();
         let mut lights: Vec<Point3<f32>> = Vec::new();
-        //lights.push(Point3::new(0., 1000., 0.));
-        lights.push(Point3::new(5., 5., 0.));
-        lights.push(Point3::new(-5., 5., 5.));
+        lights.push(Point3::new(0., 1000., 0.));
+        //lights.push(Point3::new(5., 5., 0.));
+        //lights.push(Point3::new(0., 10., 0.));
+        lights.push(Point3::new(-5., 5., 0.));
 
         Ray {
             origin,

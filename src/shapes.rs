@@ -96,7 +96,7 @@ impl<'a> Shapes<'a> {
     }
 
     pub fn shapes(&self, ray: &rays::Ray) -> Vec<Option<Material>> {
-           self.shapes
+        self.shapes
             .iter()
             .map(|x| -> Option<Material> { x.intersection(&ray) })
             .filter(|x| -> bool {

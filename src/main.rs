@@ -59,14 +59,14 @@ fn main() -> Result<(), String> {
     let mut bands: Vec<(usize, &mut [u32])> =
         pixels.chunks_mut(w as usize / scale).enumerate().collect();
 
-    //let hyperboloid =
-    //shapes::Hyperboloid::new(-10., Point3::new(0., 0., 0.), Vector3::new(1., 1., 1.));
-    let spheroid = shapes::Spheroid::new(2.1, Point3::new(0., 0., 0.), Vector3::new(1., 1., 1.));
+    let hyperboloid =
+        shapes::Hyperboloid::new(-10., Point3::new(0., 0., 0.), Vector3::new(1., 1., 1.));
+    let spheroid = shapes::Spheroid::new(1., Point3::new(0., 0., 0.), Vector3::new(1., 2., 1.));
     let plane = shapes::Plane::new(Vector3::new(0., 1., 0.), Point3::new(0., -5.1, 0.));
     //let torus = shapes::Torus::new(0.3, 1., Point3::new(0., 0., 0.));
-    let cylinder = shapes::Cylinder::new(0.9, Point3::new(0., 0., 0.));
+    //let cylinder = shapes::Cylinder::new(0.9, Point3::new(0., 0., 0.));
 
-    let shapes = &plane + &spheroid + &cylinder;
+    let shapes = &plane + &spheroid + &hyperboloid;
 
     //let mut prev_scale = scale;
 
