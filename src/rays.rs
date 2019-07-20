@@ -149,7 +149,7 @@ impl Ray {
 
     /// Find the closest intersection point to the ray origin, an return a color in HTML notation.
     pub fn intersection(&self, shapes: &shapes::Shapes) -> u32 {
-        let (r, g, b, p) = self.col(self.closest_material(&mut shapes.shapes(&self)));
+        let (r, g, b, p) = self.col(self.closest_material(&mut shapes.shapes(&self)), &shapes);
 
         let l = if let Some(point) = p {
             let (light, _) = self.bounce(&shapes, point);
@@ -161,10 +161,10 @@ impl Ray {
     }
 
     /// Return the color of a single intersection with a shape
-    pub fn single_intersection<S: shapes::Shape>(&self, shape: &S) -> u32 {
-        let (r, g, b, _) = self.col(shape.intersection(&self));
-        render::color(r, g, b)
-    }
+    //pub fn single_intersection<S: shapes::Shape>(&self, shape: &S) -> u32 {
+    //let (r, g, b, _) = self.col(shape.intersection(&self), &shape);
+    //render::color(r, g, b)
+    //}
 
     fn light(&self, normal: Vector3<f32>, point: Point3<f32>) -> f32 {
         let mut avg = 0.;
@@ -181,17 +181,46 @@ impl Ray {
         }
     }
 
-    pub fn light_intensity(&self) -> f32 {
+    /// The diffuse color around a light source
+    pub fn light_intensity(&self, shapes: &shapes::Shapes) -> f32 {
         let mut intensity = 0.;
         for light in &self.lights {
-            intensity += (-(self.direction.cross(light - self.origin)).magnitude()).exp();
+            // vector that is the direction from the point on the ray closest to the light point
+            let dir = self.direction.cross(light - self.origin);
+
+            // the point on the ray that is closest to the light
+            let point = light - dir;
+
+            // distance from the ray origin to the point on the line closest to the light
+            let dist = (self.origin - point).magnitude();
+
+            // How far the light is from the ray
+            let h = dir.magnitude();
+
+            // If something is between the closest point on the ray and the ray origin, do not add
+            // some intensity
+            intensity += if let Some(material) = self.closest_material(&mut shapes.shapes(&self)) {
+                if material.t >= dist {
+                    1. / (h * h)
+                } else {
+                    0.
+                }
+            } else {
+                // If nothing is in the way
+                1. / (h * h)
+            }
         }
+        // Sigmoid function to add all the light sources
         sigmoid(2. * intensity - 2.)
     }
 
     /// Returns the color of a material
-    pub fn col(&self, material: Option<Material>) -> (f32, f32, f32, Option<Point3<f32>>) {
-        let c = self.light_intensity();
+    pub fn col(
+        &self,
+        material: Option<Material>,
+        shapes: &shapes::Shapes,
+    ) -> (f32, f32, f32, Option<Point3<f32>>) {
+        let c = self.light_intensity(&shapes);
         match material {
             Some(material) => {
                 let p = self.origin + material.t * self.direction;
