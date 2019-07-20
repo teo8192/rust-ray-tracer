@@ -46,7 +46,7 @@ pub struct CamDir {
 impl CamDir {
     /// Returns the uv, witch is needed to calculate whitch way a ray should go.
     pub fn uv(x: usize, y: usize, w: usize, h: usize) -> Vector2<f32> {
-        let mut uv = Vector2::new(x as f32 / w as f32 - 0.5, y as f32 / h as f32 - 0.5);
+        let mut uv = Vector2::new((x as f32 + 0.5) / w as f32 - 0.5, (y as f32 + 0.5) / h as f32 - 0.5);
         uv.x *= w as f32 / h as f32;
         uv.y *= -1.;
         uv
