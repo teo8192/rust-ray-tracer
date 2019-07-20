@@ -125,16 +125,20 @@ impl Ray {
         }
     }
 
+    /// The shadow
     fn bounce(&self, shapes: &shapes::Shapes, point: Point3<f32>) -> (f32, Option<Point3<f32>>) {
         let mut avg = 0.;
         for light in &self.lights {
-            avg += if self
-                .closest_material(
-                    &mut shapes.shapes(&Ray::new(point, (*light - point).normalize())),
-                )
-                .is_some()
-            {
-                0.2
+            avg += if let Some(material) = self.closest_material(
+                &mut shapes.shapes(&Ray::new(point, (*light - point).normalize())),
+            ) {
+                // check to see if the light is behind the object or in front of the object
+                let dist: f32 = (light - point).magnitude();
+                if material.t < dist {
+                    0.2
+                } else {
+                    1.
+                }
             } else {
                 1.
             };
